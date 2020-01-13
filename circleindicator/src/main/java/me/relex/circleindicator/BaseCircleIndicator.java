@@ -5,6 +5,7 @@ import android.animation.AnimatorInflater;
 import android.annotation.TargetApi;
 import android.content.Context;
 import android.content.res.TypedArray;
+import android.graphics.drawable.Drawable;
 import android.os.Build;
 import android.util.AttributeSet;
 import android.util.TypedValue;
@@ -13,6 +14,8 @@ import android.view.View;
 import android.view.animation.Interpolator;
 import android.widget.LinearLayout;
 import androidx.annotation.Nullable;
+import androidx.core.content.ContextCompat;
+import androidx.core.view.ViewCompat;
 
 class BaseCircleIndicator extends LinearLayout {
 
@@ -22,8 +25,8 @@ class BaseCircleIndicator extends LinearLayout {
     protected int mIndicatorWidth = -1;
     protected int mIndicatorHeight = -1;
 
-    protected int mIndicatorBackgroundResId;
-    protected int mIndicatorUnselectedBackgroundResId;
+    protected Drawable mIndicatorBackground;
+    protected Drawable mIndicatorUnselectedBackground;
 
     protected Animator mAnimatorOut;
     protected Animator mAnimatorIn;
@@ -110,11 +113,11 @@ class BaseCircleIndicator extends LinearLayout {
         mImmediateAnimatorIn = createAnimatorIn(config);
         mImmediateAnimatorIn.setDuration(0);
 
-        mIndicatorBackgroundResId =
-                (config.backgroundResId == 0) ? R.drawable.white_radius : config.backgroundResId;
-        mIndicatorUnselectedBackgroundResId =
-                (config.unselectedBackgroundId == 0) ? config.backgroundResId
-                        : config.unselectedBackgroundId;
+        mIndicatorBackground = config.backgroundDrawable != null ? config.backgroundDrawable :
+                ContextCompat.getDrawable(getContext(), (config.backgroundResId == 0) ? R.drawable.white_radius : config.backgroundResId);
+        mIndicatorUnselectedBackground = config.unselectedBackgroundDrawable != null ? config.unselectedBackgroundDrawable :
+                ContextCompat.getDrawable(getContext(),
+                        (config.unselectedBackgroundId == 0) ? config.backgroundResId : config.unselectedBackgroundId);
 
         setOrientation(config.orientation == VERTICAL ? VERTICAL : HORIZONTAL);
         setGravity(config.gravity >= 0 ? config.gravity : Gravity.CENTER);
@@ -178,12 +181,12 @@ class BaseCircleIndicator extends LinearLayout {
         for (int i = 0; i < count; i++) {
             indicator = getChildAt(i);
             if (currentPosition == i) {
-                indicator.setBackgroundResource(mIndicatorBackgroundResId);
+                ViewCompat.setBackground(indicator, mIndicatorBackground);
                 mImmediateAnimatorOut.setTarget(indicator);
                 mImmediateAnimatorOut.start();
                 mImmediateAnimatorOut.end();
             } else {
-                indicator.setBackgroundResource(mIndicatorUnselectedBackgroundResId);
+                ViewCompat.setBackground(indicator, mIndicatorUnselectedBackground);
                 mImmediateAnimatorIn.setTarget(indicator);
                 mImmediateAnimatorIn.start();
                 mImmediateAnimatorIn.end();
@@ -230,18 +233,39 @@ class BaseCircleIndicator extends LinearLayout {
 
         View currentIndicator;
         if (mLastPosition >= 0 && (currentIndicator = getChildAt(mLastPosition)) != null) {
-            currentIndicator.setBackgroundResource(mIndicatorUnselectedBackgroundResId);
+            ViewCompat.setBackground(currentIndicator, mIndicatorUnselectedBackground);
             mAnimatorIn.setTarget(currentIndicator);
             mAnimatorIn.start();
         }
 
         View selectedIndicator = getChildAt(position);
         if (selectedIndicator != null) {
-            selectedIndicator.setBackgroundResource(mIndicatorBackgroundResId);
+            ViewCompat.setBackground(selectedIndicator, mIndicatorBackground);
             mAnimatorOut.setTarget(selectedIndicator);
             mAnimatorOut.start();
         }
         mLastPosition = position;
+    }
+
+    public void setIndicatorDrawables(Drawable selectedDrawable, Drawable unselectedDrawable){
+        mIndicatorBackground = selectedDrawable;
+        mIndicatorUnselectedBackground = unselectedDrawable;
+
+        View indicator;
+        for (int i = 0; i < getChildCount(); i++) {
+            indicator = getChildAt(i);
+            if (mLastPosition == i) {
+                ViewCompat.setBackground(indicator, mIndicatorBackground);
+                mImmediateAnimatorOut.setTarget(indicator);
+                mImmediateAnimatorOut.start();
+                mImmediateAnimatorOut.end();
+            } else {
+                ViewCompat.setBackground(indicator, mIndicatorUnselectedBackground);
+                mImmediateAnimatorIn.setTarget(indicator);
+                mImmediateAnimatorIn.start();
+                mImmediateAnimatorIn.end();
+            }
+        }
     }
 
     protected class ReverseInterpolator implements Interpolator {
